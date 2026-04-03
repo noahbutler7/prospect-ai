@@ -1,599 +1,705 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProspectAI · SDR Agent</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {}
-      }
-    }
-  </script>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; background: #09090b; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ProspectAI — SDR Prospecting Agent</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0b;
+    --bg2: #111114;
+    --bg3: #18181d;
+    --surface: #1e1e24;
+    --surface2: #252530;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f2;
+    --muted: rgba(240,240,242,0.45);
+    --muted2: rgba(240,240,242,0.25);
+    --accent: #7c6ef2;
+    --accent2: #9d93f5;
+    --green: #2dd98f;
+    --green-bg: rgba(45,217,143,0.1);
+    --amber: #f5a623;
+    --amber-bg: rgba(245,166,35,0.1);
+    --red: #f25c5c;
+    --red-bg: rgba(242,92,92,0.1);
+    --blue: #5b9cf5;
+    --blue-bg: rgba(91,156,245,0.1);
+    --font: 'DM Sans', system-ui, sans-serif;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --r: 8px;
+    --r2: 12px;
+  }
+
+  html, body, #root { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  input, textarea, select { font-family: var(--font); }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes scanLine { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+  @keyframes ping { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes shimmer { from { background-position: -400px 0; } to { background-position: 400px 0; } }
+
+  .scanning-bar {
+    background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+    background-size: 200px 2px;
+    animation: scanLine 1.8s linear infinite;
+  }
+</style>
 </head>
 <body>
-  <div id="root"></div>
+<div id="root"></div>
 
-  <script type="text/babel">
-    const {
-      useState, useEffect, useRef, useCallback
-    } = React;
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
 
-    const {
-      Users, Mail, Search, LinkedinIcon, CheckCircle, XCircle,
-      Edit3, Send, Building2, Briefcase, Plus, Clock,
-      Target, Zap, Eye, X, ChevronRight, Inbox, ArrowRight,
-      Sparkles, UserCheck, BadgeCheck, CircleDashed
-    } = LucideReact;
+const MOCK_ACCOUNTS = [
+  { id: 1, name: 'HubSpot', domain: 'hubspot.com', logo: 'HS', count: 47, color: '#ff7a59' },
+  { id: 2, name: 'Salesforce', domain: 'salesforce.com', logo: 'SF', count: 31, color: '#00a1e0' },
+  { id: 3, name: 'Gong', domain: 'gong.io', logo: 'GG', count: 18, color: '#7c3aed' },
+  { id: 4, name: 'Outreach', domain: 'outreach.io', logo: 'OT', count: 22, color: '#10b981' },
+  { id: 5, name: 'Drift', domain: 'drift.com', logo: 'DT', count: 14, color: '#f59e0b' },
+  { id: 6, name: 'Intercom', domain: 'intercom.com', logo: 'IC', count: 29, color: '#1f8ced' },
+];
 
-    // ─── Mock Data ──────────────────────────────────────────────────────────────
+const FIRST_NAMES = ['Alex','Jordan','Morgan','Taylor','Casey','Riley','Quinn','Avery','Blake','Drew','Sam','Chris','Jamie','Dana','Reese'];
+const LAST_NAMES = ['Chen','Patel','Williams','Johnson','Martinez','Thompson','Garcia','Anderson','Wilson','Taylor','Moore','Jackson','Lee','Harris','Clark'];
+const TITLES = ['VP of Sales','Director of Revenue Operations','Head of SDR','VP Marketing','Chief Revenue Officer','Director of Sales Enablement','VP of Growth','Head of Business Development','Senior Director of Sales','VP of Customer Success'];
+const COMPANIES = MOCK_ACCOUNTS;
+const SIGNALS = ['Hiring 3+ SDRs','Recently promoted','Post about AI tools','Job change 90d ago','Series B raised','Expanding to EMEA','Attended SaaStr','Following Synthesia','Commented on AI video post','New CRM rollout'];
 
-    const MOCK_COMPANY_ACCOUNTS = [
-      { id: 1, name: "Salesforce", domain: "salesforce.com", industry: "SaaS / CRM", size: "50,000+" },
-      { id: 2, name: "HubSpot", domain: "hubspot.com", industry: "SaaS / Marketing", size: "7,000+" },
-      { id: 3, name: "Outreach.io", domain: "outreach.io", industry: "SaaS / Sales", size: "1,200+" },
-      { id: 4, name: "Gong", domain: "gong.io", industry: "SaaS / Revenue Intelligence", size: "900+" },
-      { id: 5, name: "Drift", domain: "drift.com", industry: "SaaS / Conversational Marketing", size: "600+" },
-    ];
+function generateProspect(id) {
+  const fn = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+  const ln = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+  const company = COMPANIES[Math.floor(Math.random() * COMPANIES.length)];
+  const title = TITLES[Math.floor(Math.random() * TITLES.length)];
+  const signalCount = Math.floor(Math.random() * 3) + 1;
+  const prospectSignals = [...SIGNALS].sort(() => Math.random() - 0.5).slice(0, signalCount);
+  const hasEmail = Math.random() > 0.3;
+  const emailVerified = Math.random() > 0.5;
+  const icpScore = Math.floor(Math.random() * 25) + 72;
 
-    const FIRST_NAMES = ["Sarah", "James", "Priya", "Marcus", "Elena", "Tyler", "Aisha", "Ben", "Natalie", "Ravi", "Jessica", "Chris"];
-    const LAST_NAMES = ["Chen", "Rodriguez", "Patel", "Thompson", "Novak", "Washington", "Kim", "Okafor", "Martinez", "Sharma", "Walsh", "Lee"];
-    const TITLES = [
-      "VP of Sales", "Head of Sales Development", "Director of Revenue Operations",
-      "Senior Sales Manager", "VP of Growth", "Director of Inside Sales",
-      "Head of Business Development", "Chief Revenue Officer", "Sales Development Manager",
-      "VP of Revenue", "Director of Sales Enablement"
-    ];
-    const SIGNALS = [
-      "Recently promoted", "Posted about scaling outbound",
-      "Hiring 3 SDRs", "Just raised Series B", "Attended SaaStr 2025",
-      "Posted about pipeline generation", "Expanding into EMEA",
-      "New VP of Sales — likely rebuilding stack"
-    ];
+  return {
+    id,
+    firstName: fn,
+    lastName: ln,
+    name: `${fn} ${ln}`,
+    title,
+    company: company.name,
+    companyColor: company.color,
+    companyLogo: company.logo,
+    linkedin: `https://linkedin.com/in/${fn.toLowerCase()}-${ln.toLowerCase()}-${Math.floor(Math.random() * 9000) + 1000}`,
+    email: hasEmail ? `${fn.toLowerCase()}.${ln.toLowerCase()}@${company.domain}` : null,
+    emailConfidence: hasEmail ? (emailVerified ? 'verified' : 'inferred') : null,
+    signals: prospectSignals,
+    icpScore,
+    status: 'pending',
+    draft: generateDraft(fn, ln, title, company.name, prospectSignals),
+  };
+}
 
-    function randomItem(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
+function generateDraft(fn, ln, title, company, signals) {
+  const templates = [
+    {
+      subject: `Quick question about ${company}'s sales motion`,
+      body: `Hi ${fn},\n\nSaw you're leading ${company}'s sales team — congrats on the growth. I noticed ${signals[0] || 'your recent activity'} and thought there might be a fit.\n\nWe help revenue teams like yours replace static slide decks with personalized AI video at scale. ${company} reps using us see 3x email reply rates and cut deck creation time by 80%.\n\nWorth 15 minutes to explore? Happy to show a live example built for your ICP.\n\nBest,\n[Your name]`,
+    },
+    {
+      subject: `${fn} — AI video for ${company}'s outbound`,
+      body: `Hi ${fn},\n\n${signals[0] || 'Came across your profile'} caught my eye — looks like ${company} is scaling fast.\n\nQuick thought: most ${title.includes('SDR') ? 'SDR teams' : 'revenue leaders'} I talk to are fighting the same battle — high outreach volume, low personalization. We fix that with AI video that auto-personalizes at scale.\n\nI built a quick example for ${company} — want me to send it over?\n\n[Your name]`,
+    },
+    {
+      subject: `Re: ${company}'s video strategy`,
+      body: `${fn},\n\nNoticed ${signals[0] || 'your LinkedIn activity'} — you're clearly thinking about efficiency at scale.\n\nWe power personalized video outreach for teams at Zoom, Monday, and Drift. SDRs go from 10 to 100 personalized touches per day without touching a camera.\n\nCould be relevant given ${company}'s current trajectory. Open to a quick look?\n\n[Your name]`,
+    },
+  ];
+  return templates[Math.floor(Math.random() * templates.length)];
+}
 
-    function generateProspect(id, account) {
-      const firstName = randomItem(FIRST_NAMES);
-      const lastName = randomItem(LAST_NAMES);
-      const title = randomItem(TITLES);
-      const domain = account.domain;
-      const emailFormats = [
-        `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
-        `${firstName.toLowerCase()[0]}${lastName.toLowerCase()}@${domain}`,
-        `${firstName.toLowerCase()}@${domain}`,
-      ];
-      const email = Math.random() > 0.25 ? randomItem(emailFormats) : null;
-      const signal = Math.random() > 0.3 ? randomItem(SIGNALS) : null;
-      return {
-        id, firstName, lastName,
-        name: `${firstName} ${lastName}`,
-        title, company: account.name, companyId: account.id, domain, email,
-        emailConfidence: email ? (Math.random() > 0.5 ? "verified" : "inferred") : null,
-        linkedinUrl: `https://linkedin.com/in/${firstName.toLowerCase()}-${lastName.toLowerCase()}-${Math.floor(Math.random() * 9000) + 1000}`,
-        signal, avatar: `${firstName[0]}${lastName[0]}`,
-        status: "pending", emailDraft: null, addedAt: new Date(),
-      };
-    }
+function Avatar({ name, color, size = 36 }) {
+  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: color || 'var(--accent)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.36, fontWeight: 500, color: '#fff', flexShrink: 0,
+      fontFamily: 'var(--mono)', letterSpacing: '0.02em',
+    }}>
+      {initials}
+    </div>
+  );
+}
 
-    function generateEmailDraft(prospect) {
-      const openings = [`Hi ${prospect.firstName},`, `Hey ${prospect.firstName} —`, `${prospect.firstName},`];
-      const closings = [`Worth a quick 15?`, `Open to a 15-min chat this week?`, `Would love to show you what we're doing — 15 mins?`];
-      const signalLine = prospect.signal ? `\nI noticed ${prospect.signal.toLowerCase()} — congrats on the momentum.` : "";
-      const body = `${randomItem(openings)}${signalLine}
+function Badge({ label, type = 'default', small }) {
+  const styles = {
+    default: { bg: 'var(--surface2)', color: 'var(--muted)' },
+    new: { bg: 'rgba(124,110,242,0.15)', color: 'var(--accent2)' },
+    verified: { bg: 'var(--green-bg)', color: 'var(--green)' },
+    inferred: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
+    approved: { bg: 'var(--green-bg)', color: 'var(--green)' },
+    rejected: { bg: 'var(--red-bg)', color: 'var(--red)' },
+    pending: { bg: 'var(--surface2)', color: 'var(--muted)' },
+    signal: { bg: 'rgba(124,110,242,0.1)', color: 'var(--accent2)' },
+  };
+  const s = styles[type] || styles.default;
+  return (
+    <span style={{
+      padding: small ? '2px 6px' : '3px 8px',
+      borderRadius: 4,
+      fontSize: small ? 10 : 11,
+      fontWeight: 500,
+      fontFamily: 'var(--mono)',
+      background: s.bg, color: s.color,
+      whiteSpace: 'nowrap', letterSpacing: '0.02em',
+    }}>
+      {label}
+    </span>
+  );
+}
 
-I work with ${prospect.title.includes("VP") || prospect.title.includes("Chief") ? "revenue leaders" : "sales development teams"} at companies like ${prospect.company} to help them cut prospecting time by 60% while keeping personalization high.
+function ScoreRing({ score }) {
+  const color = score >= 85 ? 'var(--green)' : score >= 75 ? 'var(--accent2)' : 'var(--amber)';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: '50%',
+        border: `2px solid ${color}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, fontWeight: 600, color, fontFamily: 'var(--mono)',
+      }}>
+        {score}
+      </div>
+      <span style={{ fontSize: 9, color: 'var(--muted2)', fontFamily: 'var(--mono)' }}>ICP</span>
+    </div>
+  );
+}
 
-Most ${prospect.title}s I talk to are fighting the same battle: their reps spend more time researching than actually selling. We fix that with an AI agent that finds, qualifies, and drafts outreach for every prospect in your ICP — automatically.
-
-${randomItem(closings)}
-
-Best,
-[Your name]`;
-      return { subject: `Quick idea for ${prospect.company}'s outbound motion`, body: body.trim() };
-    }
-
-    const STATUS_CONFIG = {
-      pending:  { label: "Pending Review", color: "text-amber-400 bg-amber-400/10",   icon: CircleDashed },
-      reviewing:{ label: "Reviewing",      color: "text-blue-400 bg-blue-400/10",     icon: Eye },
-      approved: { label: "Approved",       color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle },
-      rejected: { label: "Rejected",       color: "text-red-400 bg-red-400/10",       icon: XCircle },
-      sent:     { label: "Sent",           color: "text-purple-400 bg-purple-400/10", icon: Send },
-    };
-
-    // ─── Sub-components ─────────────────────────────────────────────────────────
-
-    function Avatar({ initials, size = "md", color = "indigo" }) {
-      const sizes = { sm: "w-7 h-7 text-xs", md: "w-9 h-9 text-sm", lg: "w-12 h-12 text-base" };
-      const colors = {
-        indigo: "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30",
-        emerald: "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30",
-        violet: "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30",
-        amber: "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30",
-      };
-      return (
-        <div className={`${sizes[size]} ${colors[color]} rounded-full flex items-center justify-center font-semibold flex-shrink-0`}>
-          {initials}
-        </div>
-      );
-    }
-
-    function Badge({ status }) {
-      const cfg = STATUS_CONFIG[status];
-      const Icon = cfg.icon;
-      return (
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
-          <Icon size={10} />{cfg.label}
-        </span>
-      );
-    }
-
-    function LinkedInTag({ url, name }) {
-      return (
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-600/15 text-blue-400 hover:bg-blue-600/25 border border-blue-600/20 transition-colors"
-          onClick={e => e.stopPropagation()}>
-          <LinkedinIcon size={10} />{name}
-        </a>
-      );
-    }
-
-    function EmailTag({ email, confidence }) {
-      if (!email) return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-zinc-800 text-zinc-500 border border-zinc-700">
-          <Mail size={10} />No email found
-        </span>
-      );
-      return (
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border ${
-          confidence === "verified" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                    : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
-          <Mail size={10} />{email}
-          {confidence === "inferred" && <span className="opacity-60">(inferred)</span>}
-          {confidence === "verified" && <BadgeCheck size={10} />}
-        </span>
-      );
-    }
-
-    // ─── Email Draft Modal ───────────────────────────────────────────────────────
-
-    function EmailDraftModal({ prospect, onClose, onApprove, onReject, onUpdateDraft }) {
-      const [subject, setSubject] = useState(prospect.emailDraft?.subject || "");
-      const [body, setBody] = useState(prospect.emailDraft?.body || "");
-      const [editing, setEditing] = useState(false);
-
-      const handleSave = () => { onUpdateDraft(prospect.id, { subject, body }); setEditing(false); };
-
-      return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-700/60 rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-              <div className="flex items-center gap-3">
-                <Avatar initials={prospect.avatar} color="indigo" />
-                <div>
-                  <p className="font-semibold text-white text-sm">{prospect.name}</p>
-                  <p className="text-xs text-zinc-400">{prospect.title} · {prospect.company}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge status={prospect.status} />
-                <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <div className="px-6 py-3 border-b border-zinc-800 flex flex-wrap gap-2">
-              <LinkedInTag url={prospect.linkedinUrl} name={`${prospect.firstName} ${prospect.lastName}`} />
-              <EmailTag email={prospect.email} confidence={prospect.emailConfidence} />
-              {prospect.signal && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                  <Zap size={10} />{prospect.signal}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">AI-Drafted Email</span>
-                <button onClick={() => setEditing(!editing)}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors">
-                  <Edit3 size={12} />{editing ? "Preview" : "Edit"}
-                </button>
-              </div>
-              {editing ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-zinc-500 mb-1 block">Subject</label>
-                    <input className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                      value={subject} onChange={e => setSubject(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-zinc-500 mb-1 block">Body</label>
-                    <textarea className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
-                      rows={12} value={body} onChange={e => setBody(e.target.value)} />
-                  </div>
-                  <button onClick={handleSave} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">
-                    Save changes
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-zinc-500 w-14 flex-shrink-0 pt-0.5">Subject</span>
-                    <span className="text-sm text-zinc-100 font-medium">{subject}</span>
-                  </div>
-                  <div className="border-t border-zinc-700/50 pt-3">
-                    <pre className="text-sm text-zinc-200 whitespace-pre-wrap font-sans leading-relaxed">{body}</pre>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-between">
-              <button onClick={() => { onReject(prospect.id); onClose(); }}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm transition-colors border border-red-500/20">
-                <XCircle size={14} />Reject
-              </button>
-              <div className="flex items-center gap-2">
-                <button onClick={() => { onApprove(prospect.id, { subject, body }); onClose(); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-sm transition-colors border border-emerald-500/20">
-                  <CheckCircle size={14} />Approve
-                </button>
-                <button onClick={() => { onApprove(prospect.id, { subject, body }, true); onClose(); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm transition-colors font-medium">
-                  <Send size={14} />Approve & Send
-                </button>
-              </div>
-            </div>
+function ProspectCard({ prospect, onClick, isNew }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        background: 'var(--surface)',
+        border: `1px solid ${isNew ? 'var(--accent)' : 'var(--border)'}`,
+        borderRadius: var_r2,
+        padding: '14px 16px',
+        cursor: 'pointer',
+        animation: isNew ? 'slideIn 0.3s ease' : 'none',
+        transition: 'border-color 0.2s, background 0.2s',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.borderColor = 'var(--border2)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = isNew ? 'var(--accent)' : 'var(--border)'; }}
+    >
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <Avatar name={prospect.name} color={prospect.companyColor} size={40} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+            <span style={{ fontWeight: 500, fontSize: 14 }}>{prospect.name}</span>
+            {isNew && <Badge label="NEW" type="new" small />}
+            <Badge label={prospect.status} type={prospect.status} small />
           </div>
-        </div>
-      );
-    }
-
-    // ─── Prospect Card ───────────────────────────────────────────────────────────
-
-    function ProspectCard({ prospect, onOpen, isNew }) {
-      const [visible, setVisible] = useState(false);
-      useEffect(() => { const t = setTimeout(() => setVisible(true), 50); return () => clearTimeout(t); }, []);
-      const color = ["indigo","emerald","violet","amber"][prospect.id % 4];
-      return (
-        <div className={`group border border-zinc-800 hover:border-zinc-600 rounded-xl bg-zinc-900/60 hover:bg-zinc-800/60 cursor-pointer ${isNew ? "ring-1 ring-indigo-500/40" : ""}`}
-          style={{ transition: "opacity 0.3s ease, transform 0.3s ease, border-color 0.2s, background 0.2s", opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(8px)" }}
-          onClick={() => onOpen(prospect)}>
-          <div className="p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
-                <Avatar initials={prospect.avatar} color={color} />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-white text-sm">{prospect.name}</span>
-                    {isNew && <span className="text-xs px-1.5 py-0.5 bg-indigo-500/15 text-indigo-400 rounded font-medium border border-indigo-500/20">New</span>}
-                  </div>
-                  <p className="text-xs text-zinc-400 mt-0.5 truncate">{prospect.title}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Building2 size={10} className="text-zinc-500 flex-shrink-0" />
-                    <span className="text-xs text-zinc-500">{prospect.company}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-shrink-0"><Badge status={prospect.status} /></div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <LinkedInTag url={prospect.linkedinUrl} name={`${prospect.firstName} ${prospect.lastName}`} />
-              <EmailTag email={prospect.email} confidence={prospect.emailConfidence} />
-              {prospect.signal && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                  <Zap size={10} />{prospect.signal}
-                </span>
-              )}
-            </div>
-            {prospect.emailDraft && (
-              <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
-                <span className="text-xs text-zinc-500 truncate flex items-center gap-1.5">
-                  <Sparkles size={10} className="text-indigo-400 flex-shrink-0" />
-                  <span className="truncate">{prospect.emailDraft.subject}</span>
-                </span>
-                <span className="text-xs text-indigo-400 flex items-center gap-1 flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Review <ChevronRight size={10} />
-                </span>
-              </div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
+            {prospect.title} · <span style={{ color: 'var(--text)' }}>{prospect.company}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            {prospect.signals.map((s, i) => <Badge key={i} label={s} type="signal" small />)}
+          </div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <a
+              href={prospect.linkedin}
+              target="_blank"
+              rel="noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--blue)', textDecoration: 'none', fontFamily: 'var(--mono)' }}
+            >
+              <LinkedInIcon /> li/{prospect.firstName.toLowerCase()}
+            </a>
+            {prospect.email && (
+              <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <EmailIcon />
+                {prospect.email}
+                <Badge label={prospect.emailConfidence} type={prospect.emailConfidence} small />
+              </span>
             )}
           </div>
         </div>
-      );
-    }
+        <ScoreRing score={prospect.icpScore} />
+      </div>
+    </div>
+  );
+}
 
-    // ─── ICP Config Panel ────────────────────────────────────────────────────────
+const var_r2 = '12px';
 
-    function ICPConfigPanel({ config, onChange }) {
-      const [newTitle, setNewTitle] = useState("");
-      const [newKeyword, setNewKeyword] = useState("");
-      const addTitle = () => { if (newTitle.trim()) { onChange({ ...config, titles: [...config.titles, newTitle.trim()] }); setNewTitle(""); } };
-      const addKeyword = () => { if (newKeyword.trim()) { onChange({ ...config, keywords: [...config.keywords, newKeyword.trim()] }); setNewKeyword(""); } };
-      return (
-        <div className="space-y-6">
+function LinkedInIcon() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>;
+}
+function EmailIcon() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>;
+}
+function SpinnerIcon() {
+  return <div style={{ width: 16, height: 16, border: '2px solid var(--border2)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />;
+}
+
+function EmailModal({ prospect, onClose, onApprove, onReject }) {
+  const [subject, setSubject] = useState(prospect.draft.subject);
+  const [body, setBody] = useState(prospect.draft.body);
+
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      animation: 'fadeIn 0.15s ease',
+      padding: 16,
+    }} onClick={onClose}>
+      <div style={{
+        background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 16,
+        width: '100%', maxWidth: 600, maxHeight: '90vh', overflow: 'auto',
+        animation: 'slideIn 0.2s ease',
+      }} onClick={e => e.stopPropagation()}>
+
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Avatar name={prospect.name} color={prospect.companyColor} size={36} />
           <div>
-            <h3 className="text-sm font-semibold text-white mb-1">Job Titles & Seniority</h3>
-            <p className="text-xs text-zinc-500 mb-3">Prospects matching these titles will be targeted.</p>
-            <div className="space-y-2">
-              {config.titles.map((t, i) => (
-                <div key={i} className="flex items-center justify-between px-3 py-2 bg-zinc-800 rounded-lg">
-                  <div className="flex items-center gap-2"><Briefcase size={12} className="text-indigo-400" /><span className="text-sm text-zinc-200">{t}</span></div>
-                  <button onClick={() => onChange({ ...config, titles: config.titles.filter((_, j) => j !== i) })} className="text-zinc-600 hover:text-red-400 transition-colors"><X size={12} /></button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2 mt-2">
-              <input className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="e.g. VP of Sales" value={newTitle} onChange={e => setNewTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && addTitle()} />
-              <button onClick={addTitle} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white transition-colors"><Plus size={14} /></button>
-            </div>
+            <div style={{ fontWeight: 500 }}>{prospect.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{prospect.title} · {prospect.company}</div>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white mb-1">Buying Signals & Keywords</h3>
-            <p className="text-xs text-zinc-500 mb-3">Signals from LinkedIn activity, hiring, or posts that indicate intent.</p>
-            <div className="flex flex-wrap gap-2">
-              {config.keywords.map((k, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-500/10 text-violet-300 border border-violet-500/20 rounded-full text-xs">
-                  <Zap size={10} />{k}
-                  <button onClick={() => onChange({ ...config, keywords: config.keywords.filter((_, j) => j !== i) })} className="hover:text-red-400 transition-colors ml-0.5"><X size={10} /></button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2 mt-2">
-              <input className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="e.g. Hiring SDRs, Recently promoted" value={newKeyword} onChange={e => setNewKeyword(e.target.value)} onKeyDown={e => e.key === "Enter" && addKeyword()} />
-              <button onClick={addKeyword} className="px-3 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-white transition-colors"><Plus size={14} /></button>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-white mb-1">Seniority Levels</h3>
-            <div className="flex flex-wrap gap-2">
-              {["C-Suite","VP","Director","Manager","Individual Contributor"].map(level => (
-                <button key={level} onClick={() => onChange({ ...config, seniority: config.seniority.includes(level) ? config.seniority.filter(s => s !== level) : [...config.seniority, level] })}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${config.seniority.includes(level) ? "bg-indigo-600/20 text-indigo-300 border-indigo-500/40" : "bg-zinc-800 text-zinc-500 border-zinc-700 hover:border-zinc-600"}`}>
-                  {level}
-                </button>
-              ))}
-            </div>
-          </div>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4 }}>×</button>
         </div>
-      );
-    }
 
-    function StatCard({ icon: Icon, label, value, color }) {
-      return (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}><Icon size={16} /></div>
-          <div><p className="text-xl font-bold text-white">{value}</p><p className="text-xs text-zinc-500">{label}</p></div>
-        </div>
-      );
-    }
-
-    // ─── Main App ────────────────────────────────────────────────────────────────
-
-    function ProspectAgent() {
-      const [view, setView] = useState("queue");
-      const [scanning, setScanning] = useState(false);
-      const [scanProgress, setScanProgress] = useState(0);
-      const [prospects, setProspects] = useState([]);
-      const [newIds, setNewIds] = useState(new Set());
-      const [selectedProspect, setSelectedProspect] = useState(null);
-      const [filter, setFilter] = useState("all");
-      const [selectedAccounts, setSelectedAccounts] = useState([1, 2]);
-      const [icpConfig, setIcpConfig] = useState({
-        titles: ["VP of Sales", "Head of Sales Development", "Director of Revenue Operations", "Chief Revenue Officer"],
-        keywords: ["Hiring SDRs", "Recently promoted", "Raised funding", "Posted about pipeline"],
-        seniority: ["VP", "Director", "C-Suite"],
-      });
-      const scanIntervalRef = useRef(null);
-      const idCounterRef = useRef(1);
-
-      const stats = {
-        total: prospects.length,
-        pending: prospects.filter(p => p.status === "pending").length,
-        approved: prospects.filter(p => p.status === "approved" || p.status === "sent").length,
-        sent: prospects.filter(p => p.status === "sent").length,
-      };
-      const filteredProspects = prospects.filter(p => filter === "all" || p.status === filter);
-
-      const startScan = useCallback(() => {
-        if (scanning) return;
-        setScanning(true); setScanProgress(0);
-        const targetAccounts = MOCK_COMPANY_ACCOUNTS.filter(a => selectedAccounts.includes(a.id));
-        let count = 0;
-        const total = 12 + Math.floor(Math.random() * 8);
-        scanIntervalRef.current = setInterval(() => {
-          count++;
-          setScanProgress(Math.min(Math.round((count / total) * 100), 98));
-          const account = randomItem(targetAccounts);
-          const id = idCounterRef.current++;
-          const prospect = generateProspect(id, account);
-          prospect.emailDraft = generateEmailDraft(prospect);
-          setProspects(prev => [prospect, ...prev]);
-          setNewIds(prev => new Set([...prev, id]));
-          setTimeout(() => setNewIds(prev => { const n = new Set(prev); n.delete(id); return n; }), 5000);
-          if (count >= total) { clearInterval(scanIntervalRef.current); setScanProgress(100); setTimeout(() => setScanning(false), 800); }
-        }, 900);
-      }, [scanning, selectedAccounts]);
-
-      const stopScan = useCallback(() => { clearInterval(scanIntervalRef.current); setScanning(false); setScanProgress(0); }, []);
-      const updateStatus = useCallback((id, status) => setProspects(prev => prev.map(p => p.id === id ? { ...p, status } : p)), []);
-      const updateDraft = useCallback((id, draft) => setProspects(prev => prev.map(p => p.id === id ? { ...p, emailDraft: draft } : p)), []);
-      const approveProspect = useCallback((id, draft, send = false) => setProspects(prev => prev.map(p => p.id === id ? { ...p, status: send ? "sent" : "approved", emailDraft: draft } : p)), []);
-      const rejectProspect = useCallback((id) => updateStatus(id, "rejected"), [updateStatus]);
-
-      const NAV = [
-        { id: "queue", label: "Prospect Queue", icon: Inbox, badge: stats.pending },
-        { id: "accounts", label: "Accounts", icon: Building2 },
-        { id: "config", label: "ICP Config", icon: Target },
-      ];
-
-      return (
-        <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-          <header className="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-40">
-            <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-14">
-              <div className="flex items-center gap-3">
-                <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center"><Zap size={14} className="text-white" /></div>
-                <span className="font-bold text-white text-sm tracking-tight">ProspectAI</span>
-                <span className="text-zinc-700 text-xs hidden sm:block">· SDR Agent</span>
-              </div>
-              <nav className="flex items-center gap-1">
-                {NAV.map(({ id, label, icon: Icon, badge }) => (
-                  <button key={id} onClick={() => setView(id)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${view === id ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"}`}>
-                    <Icon size={14} />
-                    <span className="hidden sm:block">{label}</span>
-                    {badge > 0 && <span className="w-4 h-4 rounded-full bg-indigo-500 text-white text-xs flex items-center justify-center font-bold">{badge > 9 ? "9+" : badge}</span>}
-                  </button>
-                ))}
-              </nav>
-              <div>
-                {scanning
-                  ? <button onClick={stopScan} className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-sm transition-colors"><X size={13} />Stop</button>
-                  : <button onClick={startScan} className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"><Search size={13} />Start Scan</button>
-                }
-              </div>
-            </div>
-            {scanning && (
-              <div className="h-0.5 bg-zinc-800">
-                <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500" style={{ width: `${scanProgress}%` }} />
-              </div>
-            )}
-          </header>
-
-          <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <StatCard icon={Users} label="Total Prospects" value={stats.total} color="bg-indigo-500/10 text-indigo-400" />
-              <StatCard icon={Clock} label="Pending Review" value={stats.pending} color="bg-amber-500/10 text-amber-400" />
-              <StatCard icon={UserCheck} label="Approved" value={stats.approved} color="bg-emerald-500/10 text-emerald-400" />
-              <StatCard icon={Send} label="Emails Sent" value={stats.sent} color="bg-purple-500/10 text-purple-400" />
-            </div>
-
-            {view === "queue" && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1">
-                    {["all","pending","approved","rejected","sent"].map(f => (
-                      <button key={f} onClick={() => setFilter(f)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${filter === f ? "bg-zinc-700 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
-                        {f}{f !== "all" && <span className="ml-1.5 text-zinc-500">{prospects.filter(p => p.status === f).length}</span>}
-                      </button>
-                    ))}
-                  </div>
-                  {prospects.length > 0 && <span className="text-xs text-zinc-500">{filteredProspects.length} prospects</span>}
-                </div>
-                {scanning && (
-                  <div className="flex items-center gap-3 px-4 py-3 mb-4 border border-indigo-500/20 rounded-xl" style={{ background: "rgba(99,102,241,0.06)" }}>
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-                    <span className="text-sm text-indigo-300 font-medium">Scanning LinkedIn...</span>
-                    <span className="text-xs text-indigo-400/60">{scanProgress}% complete</span>
-                    <span className="ml-auto text-xs text-indigo-400/60">{prospects.length} found so far</span>
-                  </div>
-                )}
-                {filteredProspects.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {filteredProspects.map(p => <ProspectCard key={p.id} prospect={p} onOpen={setSelectedProspect} isNew={newIds.has(p.id)} />)}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4"><Search size={24} className="text-zinc-600" /></div>
-                    <p className="text-zinc-300 font-medium mb-1">No prospects yet</p>
-                    <p className="text-zinc-500 text-sm mb-6 max-w-xs">Configure your ICP and target accounts, then hit Start Scan to find prospects.</p>
-                    <button onClick={startScan} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors">
-                      <Zap size={14} />Start your first scan
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {view === "accounts" && (
-              <div className="max-w-2xl">
-                <div className="mb-4">
-                  <h2 className="text-base font-semibold text-white">Target Accounts</h2>
-                  <p className="text-xs text-zinc-500 mt-0.5">Select which accounts to scan in your next run.</p>
-                </div>
-                <div className="space-y-2">
-                  {MOCK_COMPANY_ACCOUNTS.map(account => {
-                    const active = selectedAccounts.includes(account.id);
-                    const count = prospects.filter(p => p.companyId === account.id).length;
-                    return (
-                      <div key={account.id} onClick={() => setSelectedAccounts(prev => active ? prev.filter(id => id !== account.id) : [...prev, account.id])}
-                        className={`flex items-center gap-4 px-4 py-3.5 rounded-xl border cursor-pointer transition-all ${active ? "border-indigo-500/30" : "bg-zinc-900 border-zinc-800 hover:border-zinc-700"}`}
-                        style={active ? { background: "rgba(99,102,241,0.06)" } : {}}>
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${active ? "bg-indigo-500 border-indigo-500" : "border-zinc-600"}`}>
-                          {active && <CheckCircle size={10} className="text-white" />}
-                        </div>
-                        <div className="w-9 h-9 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-300">{account.name[0]}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white">{account.name}</p>
-                          <p className="text-xs text-zinc-500">{account.industry} · {account.size} employees</p>
-                        </div>
-                        {count > 0 && <span className="text-xs text-zinc-500">{count} prospects found</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-4 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">{selectedAccounts.length} account{selectedAccounts.length !== 1 ? "s" : ""} selected</span>
-                  <button onClick={startScan} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-colors">
-                    <Search size={12} />Scan selected
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {view === "config" && (
-              <div className="max-w-xl">
-                <div className="mb-5">
-                  <h2 className="text-base font-semibold text-white">ICP Configuration</h2>
-                  <p className="text-xs text-zinc-500 mt-0.5">Define your Ideal Customer Profile. The agent uses this to filter and score prospects.</p>
-                </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-                  <ICPConfigPanel config={icpConfig} onChange={setIcpConfig} />
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button onClick={() => setView("queue")} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors">
-                    Save & go to queue <ArrowRight size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </main>
-
-          {selectedProspect && (
-            <EmailDraftModal
-              prospect={prospects.find(p => p.id === selectedProspect.id) || selectedProspect}
-              onClose={() => setSelectedProspect(null)}
-              onApprove={approveProspect}
-              onReject={rejectProspect}
-              onUpdateDraft={updateDraft}
+        <div style={{ padding: '20px 24px' }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Subject</label>
+            <input
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              style={{
+                width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
+                padding: '8px 12px', color: 'var(--text)', fontSize: 14, outline: 'none',
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
             />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Email body</label>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              rows={12}
+              style={{
+                width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8,
+                padding: '10px 12px', color: 'var(--text)', fontSize: 13, lineHeight: 1.6,
+                outline: 'none', resize: 'vertical', fontFamily: 'var(--mono)',
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => onApprove({ subject, body })}
+              style={{
+                flex: 1, padding: '10px', background: 'var(--green)', border: 'none',
+                borderRadius: 8, color: '#000', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                fontFamily: 'var(--font)',
+              }}
+            >
+              Approve & Send
+            </button>
+            <button
+              onClick={() => onApprove({ subject, body }, true)}
+              style={{
+                padding: '10px 16px', background: 'var(--surface2)', border: '1px solid var(--border)',
+                borderRadius: 8, color: 'var(--text)', fontWeight: 500, fontSize: 13, cursor: 'pointer',
+                fontFamily: 'var(--font)',
+              }}
+            >
+              Save Draft
+            </button>
+            <button
+              onClick={onReject}
+              style={{
+                padding: '10px 16px', background: 'none', border: '1px solid var(--red-bg)',
+                borderRadius: 8, color: 'var(--red)', fontWeight: 500, fontSize: 13, cursor: 'pointer',
+                fontFamily: 'var(--font)',
+              }}
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IcpPanel({ icp, setIcp }) {
+  const [titleInput, setTitleInput] = useState('');
+  const [signalInput, setSignalInput] = useState('');
+
+  const addTitle = () => {
+    if (titleInput.trim()) {
+      setIcp(p => ({ ...p, titles: [...p.titles, titleInput.trim()] }));
+      setTitleInput('');
+    }
+  };
+  const addSignal = () => {
+    if (signalInput.trim()) {
+      setIcp(p => ({ ...p, signals: [...p.signals, signalInput.trim()] }));
+      setSignalInput('');
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Target Titles</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          {icp.titles.map((t, i) => (
+            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: 'rgba(124,110,242,0.1)', borderRadius: 6, fontSize: 12, color: 'var(--accent2)', fontFamily: 'var(--mono)' }}>
+              {t}
+              <button onClick={() => setIcp(p => ({ ...p, titles: p.titles.filter((_, j) => j !== i) }))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', lineHeight: 1, padding: 0, fontSize: 14 }}>×</button>
+            </span>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            value={titleInput}
+            onChange={e => setTitleInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTitle()}
+            placeholder="Add title..."
+            style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--mono)' }}
+          />
+          <button onClick={addTitle} style={{ padding: '6px 12px', background: 'var(--accent)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>+</button>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Seniority</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['C-Suite','VP','Director','Head of','Senior Manager'].map(lvl => (
+            <button
+              key={lvl}
+              onClick={() => setIcp(p => ({
+                ...p,
+                seniority: p.seniority.includes(lvl)
+                  ? p.seniority.filter(s => s !== lvl)
+                  : [...p.seniority, lvl],
+              }))}
+              style={{
+                padding: '5px 10px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontFamily: 'var(--mono)',
+                background: icp.seniority.includes(lvl) ? 'rgba(124,110,242,0.15)' : 'var(--surface)',
+                border: `1px solid ${icp.seniority.includes(lvl) ? 'var(--accent)' : 'var(--border)'}`,
+                color: icp.seniority.includes(lvl) ? 'var(--accent2)' : 'var(--muted)',
+                transition: 'all 0.15s',
+              }}
+            >{lvl}</button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Buying Signals</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          {icp.signals.map((s, i) => (
+            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: 'var(--green-bg)', borderRadius: 6, fontSize: 12, color: 'var(--green)', fontFamily: 'var(--mono)' }}>
+              {s}
+              <button onClick={() => setIcp(p => ({ ...p, signals: p.signals.filter((_, j) => j !== i) }))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', lineHeight: 1, padding: 0, fontSize: 14 }}>×</button>
+            </span>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            value={signalInput}
+            onChange={e => setSignalInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addSignal()}
+            placeholder="Add signal keyword..."
+            style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text)', fontSize: 12, outline: 'none', fontFamily: 'var(--mono)' }}
+          />
+          <button onClick={addSignal} style={{ padding: '6px 12px', background: 'var(--green)', border: 'none', borderRadius: 6, color: '#000', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>+</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [prospects, setProspects] = useState([]);
+  const [newIds, setNewIds] = useState(new Set());
+  const [scanning, setScanning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [selectedAccounts, setSelectedAccounts] = useState(new Set([1, 2, 3]));
+  const [selectedProspect, setSelectedProspect] = useState(null);
+  const [activeTab, setActiveTab] = useState('queue');
+  const [filter, setFilter] = useState('all');
+  const [icp, setIcp] = useState({
+    titles: ['VP of Sales', 'Director of Revenue', 'Head of SDR', 'CRO'],
+    seniority: ['VP', 'C-Suite', 'Director'],
+    signals: ['Hiring SDRs', 'Series A/B raised', 'AI tools post'],
+  });
+
+  const scanRef = useRef(null);
+  const counterRef = useRef(0);
+
+  const startScan = useCallback(() => {
+    setProspects([]);
+    setProgress(0);
+    setScanning(true);
+    setNewIds(new Set());
+    counterRef.current = 0;
+    const total = 12 + Math.floor(Math.random() * 8);
+    let count = 0;
+
+    scanRef.current = setInterval(() => {
+      count++;
+      const newProspect = generateProspect(++counterRef.current);
+      setProspects(prev => [newProspect, ...prev]);
+      setNewIds(prev => {
+        const next = new Set(prev);
+        next.add(newProspect.id);
+        setTimeout(() => setNewIds(p => { const n = new Set(p); n.delete(newProspect.id); return n; }), 3000);
+        return next;
+      });
+      setProgress(Math.round((count / total) * 100));
+      if (count >= total) {
+        clearInterval(scanRef.current);
+        setScanning(false);
+        setProgress(100);
+      }
+    }, 900 + Math.random() * 600);
+  }, []);
+
+  const stopScan = () => {
+    clearInterval(scanRef.current);
+    setScanning(false);
+  };
+
+  const handleApprove = (prospect, draftOnly = false) => {
+    setProspects(prev => prev.map(p => p.id === prospect.id ? { ...p, status: draftOnly ? 'pending' : 'approved', draft: { ...p.draft } } : p));
+    setSelectedProspect(null);
+  };
+
+  const handleReject = (prospect) => {
+    setProspects(prev => prev.map(p => p.id === prospect.id ? { ...p, status: 'rejected' } : p));
+    setSelectedProspect(null);
+  };
+
+  const filteredProspects = prospects.filter(p => filter === 'all' || p.status === filter);
+
+  const stats = {
+    total: prospects.length,
+    approved: prospects.filter(p => p.status === 'approved').length,
+    pending: prospects.filter(p => p.status === 'pending').length,
+    rejected: prospects.filter(p => p.status === 'rejected').length,
+  };
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* Sidebar */}
+      <div style={{
+        width: 260, flexShrink: 0, background: 'var(--bg2)', borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        <div style={{ padding: '20px 20px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+            <div style={{ width: 28, height: 28, background: 'var(--accent)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14, letterSpacing: '-0.01em' }}>ProspectAI</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>SDR Agent</div>
+            </div>
+          </div>
+
+          <button
+            onClick={scanning ? stopScan : startScan}
+            style={{
+              width: '100%', padding: '10px', borderRadius: 8,
+              background: scanning ? 'var(--red-bg)' : 'var(--accent)',
+              border: scanning ? '1px solid var(--red)' : 'none',
+              color: scanning ? 'var(--red)' : '#fff',
+              fontWeight: 600, fontSize: 13, cursor: 'pointer',
+              fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              transition: 'all 0.2s',
+            }}
+          >
+            {scanning ? <><SpinnerIcon /> Stop Scan</> : '▶ Start Scan'}
+          </button>
+
+          {(scanning || progress > 0) && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginBottom: 4, fontFamily: 'var(--mono)' }}>
+                <span>{scanning ? 'Scanning LinkedIn...' : 'Scan complete'}</span>
+                <span>{progress}%</span>
+              </div>
+              <div style={{ height: 3, background: 'var(--surface2)', borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ height: '100%', width: `${progress}%`, background: scanning ? 'var(--accent)' : 'var(--green)', borderRadius: 2, transition: 'width 0.5s ease' }} />
+                {scanning && <div className="scanning-bar" style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: 80 }} />}
+              </div>
+            </div>
           )}
         </div>
-      );
-    }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<ProspectAgent />);
-  </script>
+        <div style={{ padding: '0 20px 16px' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {[['queue','Queue'],['icp','ICP']].map(([tab, label]) => (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                flex: 1, padding: '6px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font)',
+                background: activeTab === tab ? 'var(--surface2)' : 'none',
+                color: activeTab === tab ? 'var(--text)' : 'var(--muted)',
+                fontWeight: activeTab === tab ? 500 : 400,
+              }}>{label}</button>
+            ))}
+          </div>
+
+          {activeTab === 'queue' ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
+                {[
+                  { label: 'Found', val: stats.total, color: 'var(--text)' },
+                  { label: 'Approved', val: stats.approved, color: 'var(--green)' },
+                  { label: 'Pending', val: stats.pending, color: 'var(--amber)' },
+                  { label: 'Rejected', val: stats.rejected, color: 'var(--red)' },
+                ].map(s => (
+                  <div key={s.label} style={{ background: 'var(--surface)', borderRadius: 8, padding: '8px 10px' }}>
+                    <div style={{ fontSize: 18, fontWeight: 600, color: s.color, fontFamily: 'var(--mono)' }}>{s.val}</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Accounts</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {MOCK_ACCOUNTS.map(acc => (
+                  <label key={acc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 8px', borderRadius: 6, transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedAccounts.has(acc.id)}
+                      onChange={() => setSelectedAccounts(prev => {
+                        const next = new Set(prev);
+                        next.has(acc.id) ? next.delete(acc.id) : next.add(acc.id);
+                        return next;
+                      })}
+                      style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
+                    />
+                    <div style={{ width: 18, height: 18, borderRadius: 4, background: acc.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, color: '#fff', fontWeight: 700, fontFamily: 'var(--mono)' }}>{acc.logo}</div>
+                    <span style={{ flex: 1, fontSize: 12 }}>{acc.name}</span>
+                    <span style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{acc.count}</span>
+                  </label>
+                ))}
+              </div>
+            </>
+          ) : (
+            <IcpPanel icp={icp} setIcp={setIcp} />
+          )}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg2)' }}>
+          <span style={{ fontWeight: 500, fontSize: 15 }}>Prospect Queue</span>
+          <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{filteredProspects.length} results</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+            {['all','pending','approved','rejected'].map(f => (
+              <button key={f} onClick={() => setFilter(f)} style={{
+                padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--mono)',
+                background: filter === f ? 'var(--surface2)' : 'none',
+                color: filter === f ? 'var(--text)' : 'var(--muted)',
+                textTransform: 'capitalize',
+              }}>{f}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+          {prospects.length === 0 && !scanning ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontWeight: 500, marginBottom: 4 }}>No prospects yet</div>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>Configure your ICP and hit Start Scan</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 800 }}>
+              {scanning && prospects.length === 0 && (
+                <div style={{ padding: '14px 16px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 13 }}>
+                  <SpinnerIcon /> Scanning LinkedIn profiles...
+                </div>
+              )}
+              {filteredProspects.map(p => (
+                <ProspectCard
+                  key={p.id}
+                  prospect={p}
+                  isNew={newIds.has(p.id)}
+                  onClick={() => setSelectedProspect(p)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {selectedProspect && (
+        <EmailModal
+          prospect={selectedProspect}
+          onClose={() => setSelectedProspect(null)}
+          onApprove={(draft, draftOnly) => {
+            setProspects(prev => prev.map(p =>
+              p.id === selectedProspect.id
+                ? { ...p, status: draftOnly ? 'pending' : 'approved', draft: { ...p.draft, ...draft } }
+                : p
+            ));
+            setSelectedProspect(null);
+          }}
+          onReject={() => {
+            setProspects(prev => prev.map(p =>
+              p.id === selectedProspect.id ? { ...p, status: 'rejected' } : p
+            ));
+            setSelectedProspect(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>
