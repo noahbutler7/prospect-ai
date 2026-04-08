@@ -5,7 +5,7 @@
  * Set VITE_API_BASE_URL in your .env to point at your server.
  */
 
-const BASE = import.meta.env?.VITE_API_BASE_URL ?? "http://localhost:8000";
+const BASE = "https://prospect-ai.railway.app";  // your Railway URL
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
